@@ -129,6 +129,17 @@ class DataProcessor private constructor(context: Context) {
 
     suspend fun updateRace(race: Race) {
         ardfRepository.updateRace(race)
+
+        // Keep the active race in sync with the persisted settings. The SportIdent
+        // reader uses currentState.currentRace when processing each card readout.
+        currentState.value?.let { state ->
+            if (state.currentRace?.id == race.id) {
+                currentState.postValue(
+                    AppState(race, state.siReaderState, state.resultServiceJob)
+                )
+            }
+        }
+
         updateResultsByRace(race.id)
     }
 
@@ -434,8 +445,14 @@ class DataProcessor private constructor(context: Context) {
         punches.forEach { punch -> createPunch(punch) }
     }
 
-    suspend fun processCardData(cardData: CardData, race: Race) =
-        appContext.get()?.let { ResultsProcessor.processCardData(cardData, race, it, this) }
+    suspend fun processCardData(cardData: CardData, race: Race) {
+        // The reader may hold an older Race instance after settings were changed.
+        // Always use the latest persisted race so START rounding applies immediately.
+        val currentRace = getRace(race.id) ?: race
+        appContext.get()?.let {
+            ResultsProcessor.processCardData(cardData, currentRace, it, this)
+        }
+    }
 
     suspend fun setAllResultsUnsent(raceId: UUID) =
         ardfRepository.setAllResultsUnsent(raceId)
