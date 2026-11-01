@@ -450,11 +450,11 @@ object ResultsProcessor {
             }
         }
 
-        // Modify the start and finish times. An explicitly edited START time is
-        // a manual override, so keep it exact rather than applying race rounding.
+        // Modify the start and finish times. A manually edited START time becomes
+        // the new unrounded source time, but the race rounding setting still applies.
         removeStartAndFinishPunch(result, punches, true, race)
         if (manuallyEditedStartTime != null) {
-            result.startTime = manuallyEditedStartTime
+            result.startTime = roundStartTime(manuallyEditedStartTime, race)
             result.startTimeSource = StartTimeSource.PUNCHED
         }
 
@@ -646,11 +646,12 @@ object ResultsProcessor {
                 clearEvaluation(punches, result)
             }
 
-            // Re-apply the race's start-punch rounding when recalculating an existing result.
-            // Only do this for unmodified results whose start time originates from a real
-            // START punch. Drawn times and manually modified readouts must be preserved.
+            // Re-apply race rounding whenever a preserved punched START source exists.
+            // This includes manually corrected START times: originalStartPunchTime is then
+            // the corrected unrounded base. Drawn times remain unaffected.
             val refreshPunchedStartTime =
-                !result.modified && result.startTimeSource == StartTimeSource.PUNCHED
+                result.startTimeSource == StartTimeSource.PUNCHED &&
+                    result.originalStartPunchTime != null
 
             // If the original START punch is available in the stored punches,
             // removeStartAndFinishPunch() captures it before this result is saved.
