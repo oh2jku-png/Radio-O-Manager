@@ -449,6 +449,16 @@ object ResultsProcessor {
             punch.order = order
         }
 
+        // If the START punch was explicitly edited, update the preserved source time.
+        // The editor initially displays result.startTime (which may already be rounded),
+        // so an unchanged value must not replace the original unrounded SI punch.
+        if (modified && punches.firstOrNull()?.punchType == SIRecordType.START) {
+            val editedStartTime = punches.first().siTime
+            if (result.startTime == null || editedStartTime.compareTo(result.startTime) != 0) {
+                result.originalStartPunchTime = SITime(editedStartTime)
+            }
+        }
+
         //Modify the start and finish times
         removeStartAndFinishPunch(result, punches, true, race)
 
