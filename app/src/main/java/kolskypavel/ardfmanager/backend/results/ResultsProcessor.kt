@@ -452,15 +452,22 @@ object ResultsProcessor {
         // If the START punch was explicitly edited, update the preserved source time.
         // The editor initially displays result.startTime (which may already be rounded),
         // so an unchanged value must not replace the original unrounded SI punch.
+        var manuallyEditedStartTime: SITime? = null
         if (modified && punches.firstOrNull()?.punchType == SIRecordType.START) {
             val editedStartTime = punches.first().siTime
             if (result.startTime == null || editedStartTime.compareTo(result.startTime) != 0) {
+                manuallyEditedStartTime = SITime(editedStartTime)
                 result.originalStartPunchTime = SITime(editedStartTime)
             }
         }
 
-        //Modify the start and finish times
+        // Modify the start and finish times. An explicitly edited START time is
+        // a manual override, so keep it exact rather than applying race rounding.
         removeStartAndFinishPunch(result, punches, true, race)
+        if (manuallyEditedStartTime != null) {
+            result.startTime = manuallyEditedStartTime
+            result.startTimeSource = StartTimeSource.PUNCHED
+        }
 
         calculateResult(
             result,
