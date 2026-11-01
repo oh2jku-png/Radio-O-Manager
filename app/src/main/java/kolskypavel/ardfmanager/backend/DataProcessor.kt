@@ -445,13 +445,12 @@ class DataProcessor private constructor(context: Context) {
         punches.forEach { punch -> createPunch(punch) }
     }
 
-    suspend fun processCardData(cardData: CardData, race: Race) {
+    suspend fun processCardData(cardData: CardData, race: Race): Boolean {
         // The reader may hold an older Race instance after settings were changed.
         // Always use the latest persisted race so START rounding applies immediately.
         val currentRace = getRace(race.id) ?: race
-        appContext.get()?.let {
-            ResultsProcessor.processCardData(cardData, currentRace, it, this)
-        }
+        val context = appContext.get() ?: return false
+        return ResultsProcessor.processCardData(cardData, currentRace, context, this)
     }
 
     suspend fun setAllResultsUnsent(raceId: UUID) =
