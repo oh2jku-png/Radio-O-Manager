@@ -572,8 +572,24 @@ class DataProcessor private constructor(context: Context) {
     suspend fun exportRaceData(uri: Uri, raceId: UUID) =
         fileProcessor?.exportRaceData(uri, raceId)
 
-    suspend fun saveRaceData(raceData: RaceData) =
+    suspend fun saveRaceData(raceData: RaceData) {
+        // A complete-race import bypasses the SportIdent card readout path. Apply
+        // the selected rounding settings to every imported punched START time
+        // before persisting the imported results.
+        raceData.competitorData.forEach { competitorData ->
+            competitorData.readoutData?.let { readoutData ->
+                ResultsProcessor.prepareImportedStartTime(readoutData.result, raceData.race)
+            }
+        }
+        raceData.unmatchedReadoutData.forEach { readoutData ->
+            ResultsProcessor.prepareImportedStartTime(readoutData.result, raceData.race)
+        }
+
         ardfRepository.saveRaceData(raceData)
+
+        // Recalculate linked competitors using the preserved unrounded START source.
+        updateResultsByRace(raceData.race.id)
+    }
 
     suspend fun saveDataImportWrapper(
         data: DataImportWrapper
