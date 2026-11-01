@@ -117,6 +117,21 @@ object ResultsProcessor {
         return SITime(roundedSeconds)
     }
 
+    /**
+     * Applies the selected race rounding to a result imported as part of a complete race.
+     * The imported startTime is the original punched time unless an original value was
+     * already exported by a newer app version. Keep that source so later interval changes
+     * can always recalculate from the unrounded time.
+     */
+    fun prepareImportedStartTime(result: Result, race: Race) {
+        if (result.startTimeSource == StartTimeSource.PUNCHED && result.startTime != null) {
+            if (result.originalStartPunchTime == null) {
+                result.originalStartPunchTime = SITime(result.startTime!!)
+            }
+            result.startTime = roundStartTime(result.originalStartPunchTime!!, race)
+        }
+    }
+
     private fun removeStartAndFinishPunch(
         result: Result,
         punches: ArrayList<Punch>,
